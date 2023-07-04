@@ -1,4 +1,4 @@
-# SPC
+# SPyChart
 An automated Statistical Process Control (SPC) tool designed to streamline SPC analytics.
 
 ## Description
