@@ -17,8 +17,8 @@ Note, p-chart, c-chart, XbarR-chart & XbarS-chart assume further inputs, describ
 
 Additional arguments include:
 
-- change_dates: Requires a list of dates, representing process change dates. At each date, the control lines will be re-calculated. This argument is useful if you know there have been process changes and you want the control lines to reflect these changes.
-- baseline_date: Requires a single date. This argument is useful if you want the control lines to be calculated only on data up to the baseline_date. This may be useful if you would like to test whether a change in the system is having an impact on the observed process.
+- `change_dates`: Requires a list of dates, representing process change dates. At each date, the control lines will be re-calculated. This argument is useful if you know there have been process changes and you want the control lines to reflect these changes.
+-`baseline_date`: Requires a single date. This argument is useful if you want the control lines to be calculated only on data up to the baseline_date. This may be useful if you would like to test whether a change in the system is having an impact on the observed process.
 
 Following these inputs, the tool will test up to 8 rules for special cause variation. The SPC chart will then be produced (using Plotly) for interactive visulisation. The data will also be available, should you wish to produce your own SPC charts.
 
