@@ -9,8 +9,7 @@
  ░░░░░░░░░  ░░░░░          ░░░░░███   ░░░░░░░░░  ░░░░ ░░░░░  ░░░░░░░░ ░░░░░        ░░░░░  
                            ███ ░███                                                       
                           ░░██████                                                        
-                           ░░░░░░                                                                                                             
-                                                                                                                                                                                                                                                                                                                         
+                           ░░░░░░                                                                                                                                                               
 '''
 
 # --------------------------
@@ -29,12 +28,11 @@ from plotly.subplots import make_subplots
 -** REFERENCES **-
 ------------------
 
-
-1. https://github.com/rsalaza4/Python-for-Industrial-Engineering/blob/master/Quality%20Control%20Charts/Process%20Stability%20Control.py
     
-2. https://towardsdatascience.com/quality-control-charts-guide-for-python-9bb1c859c051
-
-3. https://www.spcforexcel.com/knowledge/control-chart-basics/control-chart-rules-interpretation 
+- https://towardsdatascience.com/quality-control-charts-guide-for-python-9bb1c859c051
+- https://www.spcforexcel.com/knowledge/control-chart-basics/control-chart-rules-interpretation 
+- https://www.spcforexcel.com/knowledge/control-chart-basics/applying-out-of-control-tests
+- https://qi.elft.nhs.uk/wp-content/uploads/2018/10/Mohammed-et-al-2008-Plotting-basic-control-charts.pdf
     
 '''    
  
@@ -110,13 +108,12 @@ class SPC:
  
     def rules_func(input_df, target_col):
         
+        
         """ 
         
         Checks up to 8 SPC rules. Not all rules are suitable for all charts, therefore, fewer rules will
-        be tested in these instances (described more in reference 2).
+        be tested in these instances.
         
-        (Code for this section came from reference 1)
-
         Args:
             input_df (pandas.DataFrame): Data to analyse.
             target_col (str): Name of target column.
@@ -127,343 +124,71 @@ class SPC:
         """
         
         
-        # Control chart rules lists setup
-        R1_lower = []
-        R1_upper = []
-        R2_lower = ['-', '-']
-        R2_upper = ['-', '-']
-        R3_lower = ['-', '-', '-', '-']
-        R3_upper = ['-', '-', '-', '-']
-        R4_lower = ['-', '-', '-', '-', '-', '-']
-        R4_upper = ['-', '-', '-', '-', '-', '-']
-        R5_down = ['-', '-', '-', '-', '-', '-']
-        R5_up = ['-', '-', '-', '-', '-', '-']
-        R6 = ['-', '-', '-', '-', '-', '-', '-']
-        R7 = ['-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-']
-        R8 = ['-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-']
- 
-        # Rule 1 - Lower
-        for idx, x in enumerate(input_df[target_col]):
-            if x < input_df['lcl'][idx]:
-                R1_lower.append(False)
-            else:
-                R1_lower.append(True)
- 
-        # Rule 1 - Upper
-        for idx, x in enumerate(input_df[target_col]):
-            if x > input_df['ucl'][idx]:
-                R1_upper.append(False)
-            else:
-                R1_upper.append(True)
- 
-        # Rule 2 - Lower
-        i = 2
-        while i <= len(input_df[target_col]) - 1:
-            if ((input_df[target_col][i] < input_df['-2sd'][i] and input_df[target_col][i - 1] <
-                 input_df['-2sd'][i - 1]) or
-                    (input_df[target_col][i - 1] < input_df['-2sd'][i - 1]
-                     and input_df[target_col][i - 2] < input_df['-2sd'][i - 2]) or
-                    (input_df[target_col][i] < input_df['-2sd'][i]
-                     and input_df[target_col][i - 2] < input_df['-2sd'][i - 2])):
-                R2_lower.append(False)
-            else:
-                R2_lower.append(True)
-            i += 1
- 
-        # Rule 2 - Upper
-        i = 2
-        while i <= len(input_df[target_col]) - 1:
-            if ((input_df[target_col][i] > input_df['+2sd'][i]
-                 and input_df[target_col][i - 1] > input_df['+2sd'][i - 1]) or
-                    (input_df[target_col][i - 1] > input_df['+2sd'][i - 1]
-                     and input_df[target_col][i - 2] > input_df['+2sd'][i - 2]) or
-                    (input_df[target_col][i] > input_df['+2sd'][i]
-                     and input_df[target_col][i - 2] > input_df['+2sd'][i - 2])):
-                R2_upper.append(False)
-            else:
-                R2_upper.append(True)
-            i += 1
- 
-        # Rule 3 - Lower
-        i = 4
-        while i <= len(input_df[target_col]) - 1:
-            if ((input_df[target_col][i - 4] < input_df['-1sd'][i - 4]
-                 and input_df[target_col][i - 3] < input_df['-1sd'][i - 3]
-                 and input_df[target_col][i - 2] < input_df['-1sd'][i - 2]
-                 and input_df[target_col][i - 1] < input_df['-1sd'][i - 1]) or
-                    (input_df[target_col][i - 4] < input_df['-1sd'][i - 4]
-                     and input_df[target_col][i - 3] < input_df['-1sd'][i - 3]
-                     and input_df[target_col][i - 2] < input_df['-1sd'][i - 2]
-                     and input_df[target_col][i] < input_df['-1sd'][i]) or
-                    (input_df[target_col][i - 4] < input_df['-1sd'][i - 4]
-                     and input_df[target_col][i - 2] < input_df['-1sd'][i - 2]
-                     and input_df[target_col][i - 1] < input_df['-1sd'][i - 1]
-                     and input_df[target_col][i] < input_df['-1sd'][i]) or
-                    (input_df[target_col][i - 4] < input_df['-1sd'][i - 4]
-                     and input_df[target_col][i - 3] < input_df['-1sd'][i - 3]
-                     and input_df[target_col][i - 1] < input_df['-1sd'][i - 1]
-                     and input_df[target_col][i] < input_df['-1sd'][i]) or
-                    (input_df[target_col][i - 3] < input_df['-1sd'][i - 3]
-                     and input_df[target_col][i - 2] < input_df['-1sd'][i - 2]
-                     and input_df[target_col][i - 1] < input_df['-1sd'][i - 1]
-                     and input_df[target_col][i] < input_df['-1sd'][i])):
- 
-                R3_lower.append(False)
-            else:
-                R3_lower.append(True)
-            i += 1
- 
-        # Rule 3 - Upper
-        i = 4
-        while i <= len(input_df[target_col]) - 1:
-            if ((input_df[target_col][i - 4] > input_df['+1sd'][i - 4]
-                 and input_df[target_col][i - 3] > input_df['+1sd'][i - 3]
-                 and input_df[target_col][i - 2] > input_df['+1sd'][i - 2]
-                 and input_df[target_col][i - 1] > input_df['+1sd'][i - 1]) or
-                    (input_df[target_col][i - 4] > input_df['+1sd'][i - 4]
-                     and input_df[target_col][i - 3] > input_df['+1sd'][i - 3]
-                     and input_df[target_col][i - 2] > input_df['+1sd'][i - 2]
-                     and input_df[target_col][i] > input_df['+1sd'][i]) or
-                    (input_df[target_col][i - 4] > input_df['+1sd'][i - 4]
-                     and input_df[target_col][i - 2] > input_df['+1sd'][i - 2]
-                     and input_df[target_col][i - 1] > input_df['+1sd'][i - 1]
-                     and input_df[target_col][i] > input_df['+1sd'][i]) or
-                    (input_df[target_col][i - 4] > input_df['+1sd'][i - 4]
-                     and input_df[target_col][i - 3] > input_df['+1sd'][i - 3]
-                     and input_df[target_col][i - 1] > input_df['+1sd'][i - 1]
-                     and input_df[target_col][i] > input_df['+1sd'][i]) or
-                    (input_df[target_col][i - 3] > input_df['+1sd'][i - 3]
-                     and input_df[target_col][i - 2] > input_df['+1sd'][i - 2]
-                     and input_df[target_col][i - 1] > input_df['+1sd'][i - 1]
-                     and input_df[target_col][i] > input_df['+1sd'][i])):
- 
-                R3_upper.append(False)
-            else:
-                R3_upper.append(True)
-            i += 1
- 
-        # Rule 4 - Lower
-        i = 6
-        while i <= len(input_df[target_col]) - 1:
-            if (input_df[target_col][i] < input_df['cl'][i] and
-                    input_df[target_col][i - 1] < input_df['cl'][i - 1] and
-                    input_df[target_col][i - 2] < input_df['cl'][i - 2] and
-                    input_df[target_col][i - 3] < input_df['cl'][i - 3] and
-                    input_df[target_col][i - 4] < input_df['cl'][i - 4] and
-                    input_df[target_col][i - 5] < input_df['cl'][i - 5] and
-                    input_df[target_col][i - 6] < input_df['cl'][i - 6]):
-                R4_lower.append(False)
-            else:
-                R4_lower.append(True)
-            i += 1
- 
-        # Rule 4 - Upper
-        i = 6
-        while i <= len(input_df[target_col]) - 1:
-            if (input_df[target_col][i] > input_df['cl'][i] and
-                    input_df[target_col][i - 1] > input_df['cl'][i - 1] and
-                    input_df[target_col][i - 2] > input_df['cl'][i - 2] and
-                    input_df[target_col][i - 3] > input_df['cl'][i - 3] and
-                    input_df[target_col][i - 4] > input_df['cl'][i - 4] and
-                    input_df[target_col][i - 5] > input_df['cl'][i - 5] and
-                    input_df[target_col][i - 6] > input_df['cl'][i - 6]):
-                R4_upper.append(False)
-            else:
-                R4_upper.append(True)
-            i += 1
- 
-        # Rule 5 - Trend Down
-        i = 6
-        while i <= len(input_df[target_col]) - 1:
-            if (input_df[target_col][i] < input_df[target_col][i - 1] and
-                    input_df[target_col][i - 1] < input_df[target_col][i - 2] and
-                    input_df[target_col][i - 2] < input_df[target_col][i - 3] and
-                    input_df[target_col][i - 3] < input_df[target_col][i - 4] and
-                    input_df[target_col][i - 4] < input_df[target_col][i - 5] and
-                    input_df[target_col][i - 5] < input_df[target_col][i - 6]):
-                R5_down.append(False)
-            else:
-                R5_down.append(True)
-            i += 1
- 
-        # Rule 5 - Trend Up
-        i = 6
-        while i <= len(input_df[target_col]) - 1:
-            if (input_df[target_col][i] > input_df[target_col][i - 1] and
-                    input_df[target_col][i - 1] > input_df[target_col][i - 2] and
-                    input_df[target_col][i - 2] > input_df[target_col][i - 3] and
-                    input_df[target_col][i - 3] > input_df[target_col][i - 4] and
-                    input_df[target_col][i - 4] > input_df[target_col][i - 5] and
-                    input_df[target_col][i - 5] > input_df[target_col][i - 6]):
-                R5_up.append(False)
-            else:
-                R5_up.append(True)
-            i += 1
- 
-        # Rule 6
-        i = 7
-        while i <= len(input_df[target_col]) - 1:
-            if ((input_df[target_col][i] < input_df['-1sd'][i] or
-                 input_df[target_col][i] > input_df['+1sd'][i]) and
-                    (input_df[target_col][i - 1] < input_df['-1sd'][i - 1] or
-                     input_df[target_col][i - 1] > input_df['+1sd'][i - 1]) and
-                    (input_df[target_col][i - 2] < input_df['-1sd'][i - 2] or
-                     input_df[target_col][i - 2] > input_df['+1sd'][i - 2]) and
-                    (input_df[target_col][i - 3] < input_df['-1sd'][i - 3] or
-                     input_df[target_col][i - 3] > input_df['+1sd'][i - 3]) and
-                    (input_df[target_col][i - 4] < input_df['-1sd'][i - 4] or
-                     input_df[target_col][i - 4] > input_df['+1sd'][i - 4]) and
-                    (input_df[target_col][i - 5] < input_df['-1sd'][i - 5] or
-                     input_df[target_col][i - 5] > input_df['+1sd'][i - 5]) and
-                    (input_df[target_col][i - 6] < input_df['-1sd'][i - 6] or
-                     input_df[target_col][i - 6] > input_df['+1sd'][i - 6]) and
-                    (input_df[target_col][i - 7] < input_df['-1sd'][i - 7] or
-                     input_df[target_col][i - 7] > input_df['+1sd'][i - 7])):
-                R6.append(False)
-            else:
-                R6.append(True)
-            i += 1
- 
-        # Rule 7
-        i = 14
-        while i <= len(input_df[target_col]) - 1:
-            if (((input_df[target_col][i] < input_df['cl'][i]
-                  and input_df[target_col][i] > input_df['-1sd'][i]) or
-                 (input_df[target_col][i] > input_df['cl'][i]
-                  and input_df[target_col][i] < input_df['+1sd'][i]))
-                    and ((input_df[target_col][i - 1] < input_df['cl'][i - 1]
-                          and input_df[target_col][i - 1] > input_df['-1sd'][i - 1]) or
-                         (input_df[target_col][i - 1] > input_df['cl'][i - 1]
-                          and input_df[target_col][i - 1] < input_df['+1sd'][i - 1]))
-                    and ((input_df[target_col][i - 2] < input_df['cl'][i - 2]
-                          and input_df[target_col][i - 2] > input_df['-1sd'][i - 2]) or
-                         (input_df[target_col][i - 2] > input_df['cl'][i - 2]
-                          and input_df[target_col][i - 2] < input_df['+1sd'][i - 2]))
-                    and ((input_df[target_col][i - 3] < input_df['cl'][i - 3]
-                          and input_df[target_col][i - 3] > input_df['-1sd'][i - 3]) or
-                         (input_df[target_col][i - 3] > input_df['cl'][i - 3]
-                          and input_df[target_col][i - 3] < input_df['+1sd'][i - 3]))
-                    and ((input_df[target_col][i - 4] < input_df['cl'][i - 4]
-                          and input_df[target_col][i - 4] > input_df['-1sd'][i - 4]) or
-                         (input_df[target_col][i - 4] > input_df['cl'][i - 4]
-                          and input_df[target_col][i - 4] < input_df['+1sd'][i - 4]))
-                    and ((input_df[target_col][i - 5] < input_df['cl'][i - 5]
-                          and input_df[target_col][i - 5] > input_df['-1sd'][i - 5]) or
-                         (input_df[target_col][i - 5] > input_df['cl'][i - 5]
-                          and input_df[target_col][i - 5] < input_df['+1sd'][i - 5]))
-                    and ((input_df[target_col][i - 6] < input_df['cl'][i - 6]
-                          and input_df[target_col][i - 6] > input_df['-1sd'][i - 6]) or
-                         (input_df[target_col][i - 6] > input_df['cl'][i - 6]
-                          and input_df[target_col][i - 6] < input_df['+1sd'][i - 6]))
-                    and ((input_df[target_col][i - 7] < input_df['cl'][i - 7]
-                          and input_df[target_col][i - 7] > input_df['-1sd'][i - 7]) or
-                         (input_df[target_col][i - 7] > input_df['cl'][i - 7]
-                          and input_df[target_col][i - 7] < input_df['+1sd'][i - 7]))
-                    and ((input_df[target_col][i - 8] < input_df['cl'][i - 8]
-                          and input_df[target_col][i - 8] > input_df['-1sd'][i - 8]) or
-                         (input_df[target_col][i - 8] > input_df['cl'][i - 8]
-                          and input_df[target_col][i - 8] < input_df['+1sd'][i - 8]))
-                    and ((input_df[target_col][i - 9] < input_df['cl'][i - 9]
-                          and input_df[target_col][i - 9] > input_df['-1sd'][i - 9]) or
-                         (input_df[target_col][i - 9] > input_df['cl'][i - 9]
-                          and input_df[target_col][i - 9] < input_df['+1sd'][i - 9]))
-                    and ((input_df[target_col][i - 10] < input_df['cl'][i - 10]
-                          and input_df[target_col][i - 10] > input_df['-1sd'][i - 10]) or
-                         (input_df[target_col][i - 10] > input_df['cl'][i - 10]
-                          and input_df[target_col][i - 10] < input_df['+1sd'][i - 10]))
-                    and ((input_df[target_col][i - 11] < input_df['cl'][i - 11]
-                          and input_df[target_col][i - 11] > input_df['-1sd'][i - 11]) or
-                         (input_df[target_col][i - 11] > input_df['cl'][i - 11]
-                          and input_df[target_col][i - 11] < input_df['+1sd'][i - 11]))
-                    and ((input_df[target_col][i - 12] < input_df['cl'][i - 12]
-                          and input_df[target_col][i - 12] > input_df['-1sd'][i - 12]) or
-                         (input_df[target_col][i - 12] > input_df['cl'][i - 12]
-                          and input_df[target_col][i - 12] < input_df['+1sd'][i - 12]))
-                    and ((input_df[target_col][i - 13] < input_df['cl'][i - 13]
-                          and input_df[target_col][i - 13] > input_df['-1sd'][i - 13]) or
-                         (input_df[target_col][i - 13] > input_df['cl'][i - 13]
-                          and input_df[target_col][i - 13] < input_df['+1sd'][i - 13]))
-                    and ((input_df[target_col][i - 14] < input_df['cl'][i - 14]
-                          and input_df[target_col][i - 14] > input_df['-1sd'][i - 14]) or
-                         (input_df[target_col][i - 14] > input_df['cl'][i - 14]
-                          and input_df[target_col][i - 14] < input_df['+1sd'][i - 14]))):
- 
-                R7.append(False)
-            else:
-                R7.append(True)
-            i += 1
- 
-        # Rule #8
-        i = 13
-        while i <= len(input_df[target_col]) - 1:
-            if (((input_df[target_col][i] > input_df[target_col][i - 1]) and
-                 (input_df[target_col][i - 1] < input_df[target_col][i - 2]) and
-                 (input_df[target_col][i - 2] > input_df[target_col][i - 3]) and
-                 (input_df[target_col][i - 3] < input_df[target_col][i - 4]) and
-                 (input_df[target_col][i - 4] > input_df[target_col][i - 5]) and
-                 (input_df[target_col][i - 5] < input_df[target_col][i - 6]) and
-                 (input_df[target_col][i - 6] > input_df[target_col][i - 7]) and
-                 (input_df[target_col][i - 7] < input_df[target_col][i - 8]) and
-                 (input_df[target_col][i - 8] > input_df[target_col][i - 9]) and
-                 (input_df[target_col][i - 9] < input_df[target_col][i - 10]) and
-                 (input_df[target_col][i - 10] > input_df[target_col][i - 11]) and
-                 (input_df[target_col][i - 11] < input_df[target_col][i - 12]) and
-                 (input_df[target_col][i - 12] > input_df[target_col][i - 13])) or
-                    ((input_df[target_col][i] < input_df[target_col][i - 1]) and
-                     (input_df[target_col][i - 1] > input_df[target_col][i - 2]) and
-                     (input_df[target_col][i - 2] < input_df[target_col][i - 3]) and
-                     (input_df[target_col][i - 3] > input_df[target_col][i - 4]) and
-                     (input_df[target_col][i - 4] < input_df[target_col][i - 5]) and
-                     (input_df[target_col][i - 5] > input_df[target_col][i - 6]) and
-                     (input_df[target_col][i - 6] < input_df[target_col][i - 7]) and
-                     (input_df[target_col][i - 7] > input_df[target_col][i - 8]) and
-                     (input_df[target_col][i - 8] < input_df[target_col][i - 9]) and
-                     (input_df[target_col][i - 9] > input_df[target_col][i - 10]) and
-                     (input_df[target_col][i - 10] < input_df[target_col][i - 11]) and
-                     (input_df[target_col][i - 11] > input_df[target_col][i - 12]) and
-                     (input_df[target_col][i - 12] < input_df[target_col][i - 13]))):
-                R8.append(False)
-            else:
-                R8.append(True)
-            i += 1
- 
-        # Define outcomes dataframe's
- 
-        # for individual chart (I)
-        analysis = pd.DataFrame({'R1_lower': R1_lower,
-                                 'R1_upper': R1_upper,
-                                 'R2_lower': R2_lower,
-                                 'R2_upper': R2_upper,
-                                 'R3_lower': R3_lower,
-                                 'R3_upper': R3_upper,
-                                 'R4_lower': R4_lower,
-                                 'R4_upper': R4_upper,
-                                 'R5_down': R5_down,
-                                 'R5_up': R5_up,
-                                 'R6': R6,
-                                 'R7': R7,
-                                 'R8': R8})
-        analysis.index = input_df.index
- 
-        rules_dict = {'R1_lower': [], 'R1_upper': [], 'R2_lower': [], 'R2_upper': [],
-                      'R3_lower': [], 'R3_upper': [], 'R4_lower': [], 'R4_upper': [],
-                      'R5_down': [], 'R5_up': [], 'R6': [], 'R7': [], 'R8': []}
- 
-        # Create dictionary with list of dates for each rule violation
-        for col in analysis.columns:
-            for idx, y in enumerate(analysis[col]):
-                if y == 0:
-                    rules_dict[col].append(analysis.index[idx])
- 
-        dict_rules = {'Rule 1 violation': rules_dict['R1_lower'] + rules_dict['R1_upper'],
-                      'Rule 2 violation': rules_dict['R2_lower'] + rules_dict['R2_upper'],
-                      'Rule 3 violation': rules_dict['R3_lower'] + rules_dict['R3_upper'],
-                      'Rule 4 violation': rules_dict['R4_lower'] + rules_dict['R4_upper'],
-                      'Rule 5 violation': rules_dict['R5_down'] + rules_dict['R5_up'],
-                      'Rule 6 violation': rules_dict['R6'],
-                      'Rule 7 violation': rules_dict['R7'], 'Rule 8 violation': rules_dict['R8']}
- 
-        return dict_rules
+        violations = {}
+
+        # Rule 1: Any point outside the control limits
+        rule1 = (input_df[target_col] > input_df['ucl']) | (input_df[target_col] < input_df['lcl'])
+        violations['Rule 1 violation'] = input_df.index[rule1].tolist()
+
+        # Rule 2: Two out of three consecutive points beyond the +-2 standard deviation lines
+        rule2 = []
+        for i in range(2, len(input_df)):
+            subset = input_df.iloc[i-2:i+1]
+            if ((subset[target_col] > subset['+2sd']).sum() >= 2) or ((subset[target_col] < subset['-2sd']).sum() >= 2):
+                rule2.append(input_df.index[i])
+        violations['Rule 2 violation'] = rule2
+
+        # Rule 3: Four out of five consecutive points beyond the +-1 standard deviation lines
+        rule3 = []
+        for i in range(4, len(input_df)):
+            subset = input_df.iloc[i-4:i+1]
+            if ((subset[target_col] > subset['+1sd']).sum() >= 4) or ((subset[target_col] < subset['-1sd']).sum() >= 4):
+                rule3.append(input_df.index[i])
+        violations['Rule 3 violation'] = rule3
+
+        # Rule 4: Eight consecutive points on the same side of the cl line
+        rule4 = []
+        for i in range(7, len(input_df)):
+            subset = input_df.iloc[i-7:i+1]
+            if (subset[target_col] > subset['cl']).all() or (subset[target_col] < subset['cl']).all():
+                rule4.append(input_df.index[i])
+        violations['Rule 4 violation'] = rule4
+
+        # Rule 5: Six consecutive points steadily increasing or decreasing
+        rule5 = []
+        for i in range(5, len(input_df)):
+            subset = input_df.iloc[i-5:i+1]
+            if np.all(np.diff(subset[target_col]) > 0) or np.all(np.diff(subset[target_col]) < 0):
+                rule5.append(input_df.index[i])
+        violations['Rule 5 violation'] = rule5
+
+        # Rule 6: Eight points in a row on both sides of the cl line, but none within one standard deviation of the cl line
+        rule6 = []
+        for i in range(7, len(input_df)):
+            subset = input_df.iloc[i-7:i+1]
+            within_std_dev = np.abs(subset[target_col] - subset['cl']) <= subset['+1sd'] - subset['cl']
+            if np.all(np.sign(subset[target_col] - subset['cl']) != np.sign(subset['cl'])) and not np.any(within_std_dev):
+                rule6.append(input_df.index[i])
+        violations['Rule 6 violation'] = rule6
+
+        # Rule 7: Fifteen points in a row within one standard deviation of the cl line
+        rule7 = []
+        for i in range(14, len(input_df)):
+            subset = input_df.iloc[i-14:i+1]
+            if np.all(np.abs(subset[target_col] - subset['cl']) <= subset['+1sd'] - subset['cl']):
+                rule7.append(input_df.index[i])
+        violations['Rule 7 violation'] = rule7
+
+        # Rule 8: Fourteen points alternating up and down
+        rule8 = []
+        for i in range(13, len(input_df)):
+            subset = input_df.iloc[i-13:i+1]
+            diff = np.diff(subset[target_col])
+            if np.all(diff[:-1] * diff[1:] < 0):
+                rule8.append(input_df.index[i])
+        violations['Rule 8 violation'] = rule8
+
+        return violations
 
     def clean_time_series_data(self, data, date_column=None):
         
@@ -617,18 +342,8 @@ class SPC:
 
         if (self.chart_type == 'Individual-chart') or (self.chart_type == 'XmR-chart'):
 
-    
-            # Define list variable for moving ranges
-            MR = [np.nan]
-    
-            # Get and append moving ranges
-            i = 1
-            for i in range(1, len(data)):
-                MR.append(abs(data[self.target_col].iloc[i] - data[self.target_col].iloc[i - 1]))
-    
-            # Concatenate mR Series with and rename columns
             baseline_data = data.copy().loc[:pd.to_datetime(self.baseline_date), :]
-            baseline_data['mR'] = MR[:len(baseline_data)]
+            baseline_data['mR'] = data[self.target_col].diff().abs().loc[:pd.to_datetime(self.baseline_date)]
     
             # Individual chart
             data_I = data.copy()
@@ -654,7 +369,7 @@ class SPC:
     
             # mR chart
             data_mR = data.copy()
-            data_mR['r'] = MR
+            data_mR['r'] = data[self.target_col].diff().abs().values
             data_mR['cl'] = baseline_data['mR'].mean()
             data_mR['lcl'] = baseline_data['mR'].mean() - 3 * ((baseline_data['mR'].iloc[1:len(baseline_data['mR'])])
                                                                * 0.8525).mean()
@@ -668,6 +383,7 @@ class SPC:
                                                                 * 0.8525).mean()
             data_mR['-2sd'] = baseline_data['mR'].mean() + 2 * ((baseline_data['mR'].iloc[1:len(baseline_data['mR'])])
                                                                 * 0.8525).mean()
+            # Check lcl doesn't fall below 0.
             if data_mR['lcl'][0]<0:
                 data_mR['lcl']=0
     
@@ -677,11 +393,10 @@ class SPC:
             elif self.chart_type == 'XmR-chart':
                 return data_I, data_mR
     
+    
         elif self.chart_type == 'XbarR-chart':
     
             data_x_bar = data.copy().reset_index(drop=False)
-    
-            # Get and append groups means and ranges
             x_bar_df = data_x_bar.groupby(by=self.date_col).mean().reset_index(drop=False).rename(
                 columns={self.target_col: 'x_bar'})
             x_bar_df['r'] = data_x_bar.groupby(by=self.date_col).max()[self.target_col].values - \
@@ -700,6 +415,7 @@ class SPC:
                 x_bar_vals['A2'][self.sample_size]) * \
                             df_r.loc[:pd.to_datetime(self.baseline_date)]['r'].mean()
     
+            # Value to get each zone (A, B, C)
             zone = ((df_out['ucl'] - df_out['cl']) / 3)[0]
     
             df_out['+1sd'] = df_out['cl'] + zone
@@ -707,7 +423,7 @@ class SPC:
             df_out['+2sd'] = df_out['cl'] + 2 * zone
             df_out['-2sd'] = df_out['cl'] - 2 * zone
     
-            # remove values less than 0
+            # Check lcl doesn't fall below 0.
             df_out['lcl'] = [x if x > 0 else 0 for x in df_out['lcl']]
     
             df_out_R = pd.DataFrame()
@@ -737,7 +453,6 @@ class SPC:
     
             data_x_bar = data.copy().reset_index(drop=False)
     
-            # Get and append groups means and ranges
             x_bar_df = data_x_bar.groupby(by=self.date_col).mean().reset_index(drop=False).rename(
                 columns={self.target_col: 'x_bar'})
             x_bar_df['r'] = data_x_bar.groupby(by=self.date_col).max()[self.target_col].values - \
@@ -762,7 +477,7 @@ class SPC:
             df_out['+2sd'] = df_out['cl'] + 2 * zone
             df_out['-2sd'] = df_out['cl'] - 2 * zone
     
-            # remove values less than 0
+            # Check lcl doesn't fall below 0.
             df_out['lcl'] = [x if x > 0 else 0 for x in df_out['lcl']]
     
             df_out_S = pd.DataFrame()
@@ -781,6 +496,7 @@ class SPC:
             df_out_S['+2sd'] = df_out_S['cl'] + 2 * zone_R
             df_out_S['-2sd'] = df_out_S['cl'] - 2 * zone_R
             
+            # Check lcl doesn't fall below 0.
             if df_out_S['lcl'][0]<0:
                 df_out_S['lcl']=0
     
@@ -798,7 +514,7 @@ class SPC:
             data_in['ucl'] = data_in.loc[:pd.to_datetime(self.baseline_date)][self.target_col].mean() + \
                              (3 * ((data_in[self.target_col].mean()) ** 0.5))
     
-            # remove values less than 0
+            # Check lcl doesn't fall below 0.
             data_in['lcl'] = [x if x > 0 else 0 for x in data_in['lcl']]
     
             data_in['+1sd'] = data_in.loc[:pd.to_datetime(self.baseline_date)][self.target_col].mean() + \
@@ -850,7 +566,7 @@ class SPC:
                             1 - data_in.loc[:pd.to_datetime(self.baseline_date)][self.target_col].mean())) /
                     data_in.loc[:pd.to_datetime(self.baseline_date)]['n']) ** 0.5
     
-            # remove values less than 0
+            # Check lcl doesn't fall below 0.
             data_in['lcl'] = [x if x > 0 else 0 for x in data_in['lcl']]
             
             return data_in, None
@@ -886,7 +602,7 @@ class SPC:
                               (data_in.loc[:pd.to_datetime(self.baseline_date)][self.target_col].mean() /
                                data_in.loc[:pd.to_datetime(self.baseline_date)]['n']) ** 0.5
     
-            # remove values less than 0
+            # Check lcl doesn't fall below 0.
             data_in['lcl'] = [x if x > 0 else 0 for x in data_in['lcl']]
             
             return data_in, None
@@ -901,8 +617,7 @@ class SPC:
  
         Requires setup() method to be called first.
         
-        Checks the calcualted control lines, and tests up to 8 rules. More information on the rules can be found in 
-        reference 3.
+        Checks the calcualted control lines, and tests up to 8 rules.
  
         """
  
