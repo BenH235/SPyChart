@@ -57,7 +57,7 @@ class SPC:
             
             - Returns an interactive SPC chart (in Plotly) and the data needed to build your own chart.
         
-        NOTE: You need >= 15 data points to use this tool.
+        NOTE: You should have >= 20 data points in your dataset to use this tool.
         
         Args:
         
@@ -109,6 +109,14 @@ class SPC:
             if data_in.index.value_counts().min() == data_in.index.value_counts().max():
                 print(f'Constant sample size = {data_in.index.value_counts()[0]}')
                 self.sample_size = data_in.index.value_counts()[0]
+                
+        if len(data_in)<=20:
+            print('Less than 20 data points detected. Consider collecting more data before using this tool.')
+            
+        if self.baseline_date is not None:
+            if len(data_in.copy().loc[:pd.to_datetime(self.baseline_date)])<20:
+                print('Less than 20 data points detected in baseline period. Consider adding more \
+                data pre-baseline.')
         
         
     # -------------------------
@@ -319,8 +327,7 @@ class SPC:
             self.baseline_date = data.index[-1]
         
         if (self.baseline_date is None) & (self.change_dates is None):
-            self.baseline_date = data.index[-1]
-            
+            self.baseline_date = data.index[-1]            
             
 
         if (self.chart_type == 'Individual-chart') or (self.chart_type == 'XmR-chart'):
