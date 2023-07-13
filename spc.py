@@ -9,7 +9,7 @@
  ░░░░░░░░░  ░░░░░          ░░░░░███   ░░░░░░░░░  ░░░░ ░░░░░  ░░░░░░░░ ░░░░░        ░░░░░  
                            ███ ░███                                                       
                           ░░██████                                                        
-                           ░░░░░░                                                                                                                                                               
+                           ░░░░░░                                                                                                                                  
 '''
 
 # --------------------------
@@ -33,13 +33,15 @@ from plotly.subplots import make_subplots
 - https://www.spcforexcel.com/knowledge/control-chart-basics/control-chart-rules-interpretation 
 - https://www.spcforexcel.com/knowledge/control-chart-basics/applying-out-of-control-tests
 - https://qi.elft.nhs.uk/wp-content/uploads/2018/10/Mohammed-et-al-2008-Plotting-basic-control-charts.pdf
+- https://www.england.nhs.uk/improvement-hub/wp-content/uploads/sites/44/2017/11/A-guide-to-creating-and-interpreting-run-and-control-charts.pdf
+- https://www.qimacros.com/pdf/control-chart-cheat-sheet.pdf
     
 '''    
  
     
 class SPC:
  
-    def __init__(self, data_in, target_col, date_col, chart_type, change_dates=None, baseline_date=None, sample_size=None):
+    def __init__(self, data_in, target_col, chart_type, change_dates=None, baseline_date=None):
         
  
         """                                                                                                   
@@ -51,7 +53,7 @@ class SPC:
             
             - Calculates control lines (for the specified SPC chart).
                 
-            - Evaluates the data alongside 8 rules, which detects potential special cause variation.
+            - Evaluates the data alongside 5 rules, which detects potential special cause variation.
             
             - Returns an interactive SPC chart (in Plotly) and the data needed to build your own chart.
         
@@ -63,12 +65,12 @@ class SPC:
             
             target_col (str): Name of target column.
             
-            date_col (str): Name of date column.
-            
             chart_type (str): Choose from:
+            
                  - "XmR-chart"
                  - "Individual-chart"
-                 - "p-chart"  
+                 - "p-chart" 
+                 - "np-chart"
                  - "c-chart"
                  - "u-chart"
                  - "XbarR-chart"
@@ -79,8 +81,7 @@ class SPC:
              
              baseline_date (str) (OPTIONAL): Data before this will be used to calculate control lines, and data after,
              will be ignored in the control lines calculation.
-             
-             sample_size (int): Required if using "XbarR-chart" or "XbarS-chart".             
+                       
         
         """
  
@@ -92,14 +93,22 @@ class SPC:
         self.formatted_data_y = None
         self.target_col_x = None
         self.target_col_y = None
+        self.chart_name_ = None
+        self.chart_name_y = None
+        self.date_col = data_in.index.name
         
         self.change_dates = change_dates
         self.data_in = data_in.copy()
         self.target_col = target_col
-        self.date_col = date_col
         self.chart_type = chart_type
         self.baseline_date = baseline_date
-        self.sample_size = sample_size
+        
+        if (data_in.index.value_counts()>1).any():
+            print('Duplicate dates detected.') 
+        
+            if data_in.index.value_counts().min() == data_in.index.value_counts().max():
+                print(f'Constant sample size = {data_in.index.value_counts()[0]}')
+                self.sample_size = data_in.index.value_counts()[0]
         
         
     # -------------------------
@@ -111,86 +120,64 @@ class SPC:
         
         """ 
         
-        Checks up to 8 SPC rules. Not all rules are suitable for all charts, therefore, fewer rules will
+        Checks up to 5 SPC rules. Not all rules are suitable for all charts, therefore, fewer rules will
         be tested in these instances.
+        
+        !! Can add rules as requested.
         
         Args:
             input_df (pandas.DataFrame): Data to analyse.
             target_col (str): Name of target column.
 
         Returns:
-            dict: Dictionary of rule violations with Rule 1-8 as keys, and dates as values.
+            dict: Dictionary of rule violations with Rule 1-5 as keys, and dates as values.
 
         """
         
         
         violations = {}
 
-        # Rule 1: Any point outside the control limits
+        # Rule 1: Point outside the +/- 3 sigma limits
         rule1 = (input_df[target_col] > input_df['ucl']) | (input_df[target_col] < input_df['lcl'])
         violations['Rule 1 violation'] = input_df.index[rule1].tolist()
-
-        # Rule 2: Two out of three consecutive points beyond the +-2 standard deviation lines
+        
+        
+        # Rule 2: 8 successive consecutive points above (or below) the centre line
         rule2 = []
-        for i in range(2, len(input_df)):
-            subset = input_df.iloc[i-2:i+1]
-            if ((subset[target_col] > subset['+2sd']).sum() >= 2) or ((subset[target_col] < subset['-2sd']).sum() >= 2):
-                rule2.append(input_df.index[i])
-        violations['Rule 2 violation'] = rule2
-
-        # Rule 3: Four out of five consecutive points beyond the +-1 standard deviation lines
-        rule3 = []
-        for i in range(4, len(input_df)):
-            subset = input_df.iloc[i-4:i+1]
-            if ((subset[target_col] > subset['+1sd']).sum() >= 4) or ((subset[target_col] < subset['-1sd']).sum() >= 4):
-                rule3.append(input_df.index[i])
-        violations['Rule 3 violation'] = rule3
-
-        # Rule 4: Eight consecutive points on the same side of the cl line
-        rule4 = []
         for i in range(7, len(input_df)):
             subset = input_df.iloc[i-7:i+1]
             if (subset[target_col] > subset['cl']).all() or (subset[target_col] < subset['cl']).all():
-                rule4.append(input_df.index[i])
-        violations['Rule 4 violation'] = rule4
-
-        # Rule 5: Six consecutive points steadily increasing or decreasing
-        rule5 = []
+                rule2.append(input_df.index[i])
+        violations['Rule 2 violation'] = rule2
+        
+        # Rule 3: 6 or more consecutive points steadily increasing or decreasing
+        rule3 = []
         for i in range(5, len(input_df)):
             subset = input_df.iloc[i-5:i+1]
             if np.all(np.diff(subset[target_col]) > 0) or np.all(np.diff(subset[target_col]) < 0):
-                rule5.append(input_df.index[i])
-        violations['Rule 5 violation'] = rule5
-
-        # Rule 6: Eight points in a row on both sides of the cl line, but none within one standard deviation of the cl line
-        rule6 = []
-        for i in range(7, len(input_df)):
-            subset = input_df.iloc[i-7:i+1]
-            within_std_dev = np.abs(subset[target_col] - subset['cl']) <= subset['+1sd'] - subset['cl']
-            if np.all(np.sign(subset[target_col] - subset['cl']) != np.sign(subset['cl'])) and not np.any(within_std_dev):
-                rule6.append(input_df.index[i])
-        violations['Rule 6 violation'] = rule6
-
-        # Rule 7: Fifteen points in a row within one standard deviation of the cl line
-        rule7 = []
+                rule3.append(input_df.index[i])
+        violations['Rule 3 violation'] = rule3
+        
+        # Rule 4: 2 out of 3 successive points beyond +/- 2 sigma limits
+        rule4 = []
+        for i in range(2, len(input_df)):
+            subset = input_df.iloc[i-2:i+1]
+            if ((subset[target_col] > subset['+2sd']).sum() >= 2) or ((subset[target_col] < subset['-2sd']).sum() >= 2):
+                rule4.append(input_df.index[i])
+        violations['Rule 4 violation'] = rule4
+        
+        # Rule 5: 15 consecutive points within +/- 1 sigma on either side of the centre line
+        rule5 = []
         for i in range(14, len(input_df)):
             subset = input_df.iloc[i-14:i+1]
             if np.all(np.abs(subset[target_col] - subset['cl']) <= subset['+1sd'] - subset['cl']):
-                rule7.append(input_df.index[i])
-        violations['Rule 7 violation'] = rule7
-
-        # Rule 8: Fourteen points alternating up and down
-        rule8 = []
-        for i in range(13, len(input_df)):
-            subset = input_df.iloc[i-13:i+1]
-            diff = np.diff(subset[target_col])
-            if np.all(diff[:-1] * diff[1:] < 0):
-                rule8.append(input_df.index[i])
-        violations['Rule 8 violation'] = rule8
+                rule5.append(input_df.index[i])
+        violations['Rule 5 violation'] = rule5
 
         return violations
+    
 
-    def clean_time_series_data(self, data, date_column=None):
+    def clean_time_series_data(self, data):
         
         """ 
         
@@ -198,22 +185,16 @@ class SPC:
         
         Args:
             data (pandas.DataFrame): Data to analyse.
-            date_column (str): Name of date column.
 
         """
         
         
-        # Check if date_column exists in the data
-        if date_column not in data.columns:
-            raise ValueError(f"Date column {date_column} not found in the data.")
-
-        # Check if date_column is in datetime format and convert if required
-        if not pd.api.types.is_datetime64_any_dtype(data[date_column]):
-            data[date_column] = pd.to_datetime(data[date_column], errors='coerce')
-
-        # Check if the date_column is the index and set it as the index if not
-        if data.index.name != date_column:
-            data.set_index(date_column, inplace=True)
+        # Check if index is in pandas datetime format
+        if pd.api.types.is_datetime64_any_dtype(data.index):
+            try:
+                data.index = pd.to_datetime(data.index)
+            except ValueError:
+                raise ValueError(f"Index not in required format. Please use datetime index.")
 
         # Check for missing data
         missing_values = data.isnull().sum()
@@ -240,8 +221,8 @@ class SPC:
 
         """
        
-        # Firstly, we check for any DQ issues.
-        self.clean_time_series_data(self.data_in, self.date_col)
+        # Firstly, we check for any DQ issues using clean_time_series_data().
+        self.clean_time_series_data(self.data_in)
         
         # Check input arguments to determine number of runs of the setup_single_run() method.
         if self.change_dates is None:
@@ -278,9 +259,9 @@ class SPC:
         """
         
        Type of SPC chart currently available:
-       "XmR-chart", "Individual-chart", "p-chart",  "c-chart", "u-chart", "XbarR-chart", XbarS-chart"
+       "XmR-chart", "Individual-chart", "p-chart", "np-chart",  "c-chart", "u-chart", "XbarR-chart", XbarS-chart"
  
-       !!Can be extended to include others in the future!!
+       !! Can add chart types as requested.
  
        Returns dataframe with control limits, upper/lower as well zones A, B, C which are the 3 zones between the
        upper/lower limits and the center line.
@@ -339,6 +320,8 @@ class SPC:
         
         if (self.baseline_date is None) & (self.change_dates is None):
             self.baseline_date = data.index[-1]
+            
+            
 
         if (self.chart_type == 'Individual-chart') or (self.chart_type == 'XmR-chart'):
 
@@ -371,18 +354,17 @@ class SPC:
             data_mR = data.copy()
             data_mR['r'] = data[self.target_col].diff().abs().values
             data_mR['cl'] = baseline_data['mR'].mean()
-            data_mR['lcl'] = baseline_data['mR'].mean() - 3 * ((baseline_data['mR'].iloc[1:len(baseline_data['mR'])])
-                                                               * 0.8525).mean()
-            data_mR['ucl'] = baseline_data['mR'].mean() + 3 * ((baseline_data['mR'].iloc[1:len(baseline_data['mR'])])
-                                                               * 0.8525).mean()
-            data_mR['+1sd'] = baseline_data['mR'].mean() - 1 * ((baseline_data['mR'].iloc[1:len(baseline_data['mR'])])
-                                                                * 0.8525).mean()
-            data_mR['-1sd'] = baseline_data['mR'].mean() + 1 * ((baseline_data['mR'].iloc[1:len(baseline_data['mR'])])
-                                                                * 0.8525).mean()
-            data_mR['+2sd'] = baseline_data['mR'].mean() - 2 * ((baseline_data['mR'].iloc[1:len(baseline_data['mR'])])
-                                                                * 0.8525).mean()
-            data_mR['-2sd'] = baseline_data['mR'].mean() + 2 * ((baseline_data['mR'].iloc[1:len(baseline_data['mR'])])
-                                                                * 0.8525).mean()
+            data_mR['lcl'] = 0
+            data_mR['ucl'] = baseline_data['mR'].mean() + 3.27 * (baseline_data['mR'].iloc[1:len(baseline_data['mR'])].mean())
+            
+            zone = (data_mR['ucl'] - data_mR['cl']).mean() 
+            
+            data_mR['+1sd'] = baseline_data['mR'].mean() - 1 * zone
+            data_mR['-1sd'] = baseline_data['mR'].mean() + 1 * zone
+            data_mR['+2sd'] = baseline_data['mR'].mean() - 2 * zone
+            data_mR['-2sd'] = baseline_data['mR'].mean() + 2 * zone
+            # These are probably not correctly calculated, but for consistancy have kept in for now.
+            
             # Check lcl doesn't fall below 0.
             if data_mR['lcl'][0]<0:
                 data_mR['lcl']=0
@@ -514,9 +496,6 @@ class SPC:
             data_in['ucl'] = data_in.loc[:pd.to_datetime(self.baseline_date)][self.target_col].mean() + \
                              (3 * ((data_in[self.target_col].mean()) ** 0.5))
     
-            # Check lcl doesn't fall below 0.
-            data_in['lcl'] = [x if x > 0 else 0 for x in data_in['lcl']]
-    
             data_in['+1sd'] = data_in.loc[:pd.to_datetime(self.baseline_date)][self.target_col].mean() + \
                               (1 * ((data_in[self.target_col].mean()) ** 0.5))
             data_in['-1sd'] = data_in.loc[:pd.to_datetime(self.baseline_date)][self.target_col].mean() - \
@@ -525,6 +504,9 @@ class SPC:
                               (2 * ((data_in[self.target_col].mean()) ** 0.5))
             data_in['-2sd'] = data_in.loc[:pd.to_datetime(self.baseline_date)][self.target_col].mean() - \
                               (2 * ((data_in[self.target_col].mean()) ** 0.5))
+            
+            # Check lcl doesn't fall below 0.
+            data_in['lcl'] = [x if x > 0 else 0 for x in data_in['lcl']]
             
             return data_in, None
 
@@ -570,37 +552,69 @@ class SPC:
             data_in['lcl'] = [x if x > 0 else 0 for x in data_in['lcl']]
             
             return data_in, None
-    
-    
-        elif self.chart_type == 'u-chart':
+        
+
+        elif self.chart_type == 'np-chart':
     
             data_in = data.copy()
         
+            p = data_in[self.target_col].loc[:pd.to_datetime(self.baseline_date)].sum()\
+            /data_in.loc[:pd.to_datetime(self.baseline_date)]['n'].sum()       
+        
+            data_in['cl'] = data_in.loc[:pd.to_datetime(self.baseline_date)][self.target_col].mean()
+            
+            data_in['ucl'] = data_in.loc[:pd.to_datetime(self.baseline_date)][self.target_col].mean() \
+            + 3 * (data_in.loc[:pd.to_datetime(self.baseline_date)][self.target_col].mean() * (1 - p))**0.5
+            
+            data_in['lcl'] = data_in.loc[:pd.to_datetime(self.baseline_date)][self.target_col].mean() \
+            - 3 * (data_in.loc[:pd.to_datetime(self.baseline_date)][self.target_col].mean() * (1 - p))**0.5
+            
+            data_in['+1sd'] = data_in.loc[:pd.to_datetime(self.baseline_date)][self.target_col].mean() \
+            + 1 * (data_in.loc[:pd.to_datetime(self.baseline_date)][self.target_col].mean() * (1 - p))**0.5
+            data_in['-1sd'] = data_in.loc[:pd.to_datetime(self.baseline_date)][self.target_col].mean() \
+            - 1 * (data_in.loc[:pd.to_datetime(self.baseline_date)][self.target_col].mean() * (1 - p))**0.5
+            
+            data_in['+2sd'] = data_in.loc[:pd.to_datetime(self.baseline_date)][self.target_col].mean() \
+            + 2 * (data_in.loc[:pd.to_datetime(self.baseline_date)][self.target_col].mean() * (1 - p))**0.5
+            data_in['-2sd'] = data_in.loc[:pd.to_datetime(self.baseline_date)][self.target_col].mean() \
+            - 2 * (data_in.loc[:pd.to_datetime(self.baseline_date)][self.target_col].mean() * (1 - p))**0.5
+        
+    
+            # Check lcl doesn't fall below 0.
+            data_in['lcl'] = [x if x > 0 else 0 for x in data_in['lcl']]
+            
+            return data_in, None
+    
+        
+        elif self.chart_type == 'u-chart':
+    
+            data_in = data.copy()
+                
             data_in[self.target_col] = data_in[self.target_col]/data_in['n']
             
             data_in['cl'] = data_in.loc[:pd.to_datetime(self.baseline_date)][self.target_col].mean()
             data_in['lcl'] = data_in.loc[:pd.to_datetime(self.baseline_date)][self.target_col].mean() - 3 * \
-                             (data_in.loc[:pd.to_datetime(self.baseline_date)][self.target_col].mean() /
-                              data_in.loc[:pd.to_datetime(self.baseline_date)]['n']) ** 0.5
+                             (((data_in.loc[:pd.to_datetime(self.baseline_date)][self.target_col].mean()) ** 0.5) /
+                              (data_in.loc[:pd.to_datetime(self.baseline_date)]['n']) ** 0.5)
             data_in['ucl'] = data_in.loc[:pd.to_datetime(self.baseline_date)][self.target_col].mean() + 3 * \
-                             (data_in.loc[:pd.to_datetime(self.baseline_date)][self.target_col].mean() /
-                              data_in.loc[:pd.to_datetime(self.baseline_date)]['n']) ** 0.5
+                             (((data_in.loc[:pd.to_datetime(self.baseline_date)][self.target_col].mean()) ** 0.5) /
+                              (data_in.loc[:pd.to_datetime(self.baseline_date)]['n']) ** 0.5)
     
             data_in['+1sd'] = data_in.loc[:pd.to_datetime(self.baseline_date)][self.target_col].mean() + 1 * \
-                              (data_in.loc[:pd.to_datetime(self.baseline_date)][self.target_col].mean() /
-                               data_in.loc[:pd.to_datetime(self.baseline_date)]['n']) ** 0.5
+                              (((data_in.loc[:pd.to_datetime(self.baseline_date)][self.target_col].mean()) ** 0.5) /
+                               (data_in.loc[:pd.to_datetime(self.baseline_date)]['n']) ** 0.5)
     
             data_in['-1sd'] = data_in.loc[:pd.to_datetime(self.baseline_date)][self.target_col].mean() - 1 * \
-                              (data_in.loc[:pd.to_datetime(self.baseline_date)][self.target_col].mean() /
-                               data_in.loc[:pd.to_datetime(self.baseline_date)]['n']) ** 0.5
+                              (((data_in.loc[:pd.to_datetime(self.baseline_date)][self.target_col].mean()) ** 0.5) /
+                               (data_in.loc[:pd.to_datetime(self.baseline_date)]['n']) ** 0.5)
     
             data_in['+2sd'] = data_in.loc[:pd.to_datetime(self.baseline_date)][self.target_col].mean() + 2 * \
-                              (data_in.loc[:pd.to_datetime(self.baseline_date)][self.target_col].mean() /
-                               data_in.loc[:pd.to_datetime(self.baseline_date)]['n']) ** 0.5
+                              (((data_in.loc[:pd.to_datetime(self.baseline_date)][self.target_col].mean()) ** 0.5) /
+                               (data_in.loc[:pd.to_datetime(self.baseline_date)]['n']) ** 0.5)
     
             data_in['-2sd'] = data_in.loc[:pd.to_datetime(self.baseline_date)][self.target_col].mean() - 2 * \
-                              (data_in.loc[:pd.to_datetime(self.baseline_date)][self.target_col].mean() /
-                               data_in.loc[:pd.to_datetime(self.baseline_date)]['n']) ** 0.5
+                              (((data_in.loc[:pd.to_datetime(self.baseline_date)][self.target_col].mean()) ** 0.5) /
+                               (data_in.loc[:pd.to_datetime(self.baseline_date)]['n']) ** 0.5)
     
             # Check lcl doesn't fall below 0.
             data_in['lcl'] = [x if x > 0 else 0 for x in data_in['lcl']]
@@ -608,7 +622,7 @@ class SPC:
             return data_in, None
     
         else:
-            print('Chart type must be one of "XmR-chart", "Individual-chart", "p-chart",  "c-chart", "u-chart"'
+            print('Chart type must be one of "XmR-chart", "Individual-chart", "p-chart",  "np-chart", "c-chart", "u-chart"'
                   '"XbarR-chart", XbarS-chart"')
  
     def check_rules(self):
@@ -638,14 +652,59 @@ class SPC:
         # Defining rules applicable to each SPC chart type.
         if self.chart_type in ('XmR-chart', 'Individual-chart', 'XbarR-chart', 'XbarS-chart'):
             self.rules_list_x = ['Rule 1 violation', 'Rule 2 violation', 'Rule 3 violation', 'Rule 4 violation',
-                                 'Rule 5 violation', 'Rule 6 violation', 'Rule 7 violation', 'Rule 8 violation']
-        elif self.chart_type in ('p-chart', 'u-chart', 'c-chart'):
-            self.rules_list_x = ['Rule 1 violation', 'Rule 4 violation', 'Rule 5 violation', 'Rule 8 violation']
+                                 'Rule 5 violation']
+        elif self.chart_type in ('np-chart', 'p-chart', 'u-chart', 'c-chart'):
+            self.rules_list_x = ['Rule 1 violation', 'Rule 2 violation', 'Rule 3 violation']
  
         if self.dict_rules_y is not None:
-            self.rules_list_y = ['Rule 1 violation', 'Rule 4 violation', 'Rule 5 violation', 'Rule 8 violation']
+            self.rules_list_y = ['Rule 1 violation', 'Rule 2 violation', 'Rule 3 violation']
         else:
             self.rules_list_y = None
+            
+        # Format output data, with rule violations and control lines
+        
+        # Formatting chart type names
+        if self.chart_type in ('XmR-chart', 'Individual-chart'):
+            self.chart_name_x = 'X-chart'
+        if self.chart_type in ('XmR-chart', 'XbarR-chart'):
+            self.chart_name_y = 'mR-chart'
+        if self.chart_type in ('XbarS-chart', 'XbarR-chart'):
+            self.chart_name_x = 'Xbar-chart'
+        if self.chart_type in ('np-chart', 'p-chart', 'u-chart', 'c-chart'):
+            self.chart_name_x = self.chart_type
+        
+        dictionary_x_first = self.dict_rules_x
+        dictionary_x = {key: value for key, value in dictionary_x_first.items() if key in self.rules_list_x}
+        df_x = self.formatted_data_x
+        
+        if self.dict_rules_y is not None:
+            dictionary_y_first = self.dict_rules_y
+            dictionary_y = {key: value for key, value in dictionary_y_first.items() if key in self.rules_list_y}
+            df_y = self.formatted_data_y
+        else:
+            df_y = None      
+        
+        # Function to check if a date exists in the dictionary list
+        def check_date(date, date_list):
+            return 1 if date in date_list else 0
+
+        # Add columns with string headers and binary representation
+        for header, date_list in dictionary_x.items():
+            df_x[header] = df_x.reset_index()['ds'].apply(lambda x: check_date(x, date_list)).values
+        df_x['chart type'] = self.chart_name_x
+        self.data_x = df_x.reset_index()
+            
+        if df_y is None:
+                self.data_y = None
+        else:
+            for header, date_list in dictionary_y.items():
+                df_y[header] = df_y.reset_index()['ds'].apply(lambda x: check_date(x, date_list)).values
+            df_y['chart type'] = self.chart_name_y
+            
+            self.data_y = df_y.reset_index()
+            
+        self.spc_data = self.data_x, self.data_y
+        
             
  
     def plot_spc(self, title='SPC Chart'):
@@ -688,11 +747,18 @@ class SPC:
                                            line=dict(width=3))))
  
             fig['layout']['xaxis']['title'] = 'Date'
-            fig['layout']['yaxis']['title'] = ''
+            fig['layout']['yaxis']['title'] = 'Process'
             fig.update_layout(title=title)
  
             fig['layout']['yaxis'].update(autorange=True)
             fig['layout']['xaxis'].update(autorange=True)
+        
+            # Don't show all legend labels
+            fig.update_traces(showlegend=False, selector=dict(name='CENTRAL LINE'))
+            fig.update_traces(showlegend=False, selector=dict(name='LOWER CONTROL LINE'))
+            fig.update_traces(showlegend=False, selector=dict(name='UPPER CONTROL LINE'))
+            
+            fig.update_layout(legend=dict(orientation="h", yanchor="bottom", y=-0.2, xanchor="left"))
  
             return fig
  
@@ -706,18 +772,23 @@ class SPC:
  
             rules_dict_second = self.dict_rules_y
             rules_list_second = self.rules_list_y
+        
+            if self.chart_type == 'XbarS-chart':               
+                moving_range = "mS"
+            else:
+                moving_range = "mR"
  
             fig = make_subplots(rows=2, cols=1, row_heights=[0.7, 0.3], shared_xaxes=True, vertical_spacing=0.01)
  
-            fig.add_trace(go.Scatter(x=data.index, legendgroup='1',
+            fig.add_trace(go.Scatter(x=data.index,
                                      y=data[self.target_col], line=dict(color="blue"), name='Value'), row=1, col=1)
  
             fig.add_scatter(x=data.index, y=data['cl'], line_width=3, opacity=0.5, line_dash='dash', line_color='green',
-                            name='CENTRAL LINE', row=1, col=1, legendgroup='1')
+                            name='CENTRAL LINE', row=1, col=1)
             fig.add_scatter(x=data.index, y=data['lcl'], line_width=2, opacity=0.5, line_dash='dash', line_color='red',
-                            name='LOWER CONTROL LINE', row=1, col=1, legendgroup='1')
+                            name='LOWER CONTROL LINE', row=1, col=1)
             fig.add_scatter(x=data.index, y=data['ucl'], line_width=2, opacity=0.5, line_dash='dash', line_color='red',
-                            name='UPPER CONTROL LINE', row=1, col=1, legendgroup='1')
+                            name='UPPER CONTROL LINE', row=1, col=1)
  
             for idx, rule in enumerate(rules_list_first):
                 fig.add_trace(
@@ -725,89 +796,54 @@ class SPC:
                                mode='markers',
                                marker=dict(symbol='circle-open', opacity=1,
                                            size=12,
-                                           line=dict(width=3)), legendgroup='1'), row=1, col=1)
+                                           line=dict(width=4))), row=1, col=1)
  
             fig.add_trace(go.Scatter(x=data_var.index,
-                                     y=data_var['r'], line=dict(color="grey"), name='Moving Range', legendgroup='2'),
+                                     y=data_var['r'], line=dict(color="grey"), name='Moving Range'),
                           row=2, col=1)
  
             fig.add_scatter(x=data_var.index, y=data_var['cl'], line_width=3, opacity=0.5, line_dash='dash',
                             line_color='green',
-                            name='CENTRAL LINE', row=2, col=1, legendgroup='2')
+                            name='CENTRAL LINE', row=2, col=1)
             fig.add_scatter(x=data_var.index, y=data_var['lcl'], line_width=2, opacity=0.5, line_dash='dash',
                             line_color='red',
-                            name='LOWER CONTROL LINE', row=2, col=1, legendgroup='2')
+                            name='LOWER CONTROL LINE', row=2, col=1)
             fig.add_scatter(x=data_var.index, y=data_var['ucl'], line_width=2, opacity=0.5, line_dash='dash',
                             line_color='red',
-                            name='UPPER CONTROL LINE', row=2, col=1, legendgroup='2')
+                            name='UPPER CONTROL LINE', row=2, col=1)
  
             for idx, rule in enumerate(rules_list_second):
-                fig.add_trace(go.Scatter(name=rule, x=rules_dict_second[rule],
+                fig.add_trace(go.Scatter(name=rule + f' ({moving_range})', x=rules_dict_second[rule],
                                          y=data_var.loc[rules_dict_second[rule]]['r'],
                                          mode='markers',
                                          marker=dict(symbol='circle-open', opacity=1,
                                                      size=12,
-                                                     line=dict(width=3)), legendgroup='2'), row=2, col=1)
+                                                     line=dict(width=4))), row=2, col=1)
  
 
  
-            fig.update_layout(title=title, legend_tracegroupgap=45)
+            fig.update_layout(title=title)
  
             fig['layout']['yaxis'].update(autorange=True)
             fig['layout']['xaxis'].update(autorange=True)
- 
-            return fig
-
-    def return_data(self):
         
-        """
-        
-        Requires setup() & check_rules() methods to be called first.
-        
-        Returns all data required to build your own SPC chart. Returns two dataframes: First, the data for the
-        Variable Control Chart, secondly, the data for the Moving Range Control Chart
-        
-        Returns:
-            self.pandas.DataFrame: Dataframe with data required to build the SPC chart from scratch.                
- 
-        """
-        
-        # Formatting datasets
-        dictionary_x_first = self.dict_rules_x
-        dictionary_x = {key: value for key, value in dictionary_x_first.items() if key in self.rules_list_x}
-        df_x = self.formatted_data_x
-        
-        if self.dict_rules_y is not None:
-            dictionary_y_first = self.dict_rules_y
-            dictionary_y = {key: value for key, value in dictionary_y_first.items() if key in self.rules_list_y}
-            df_y = self.formatted_data_y
-        else:
-            df_y = None
-        
-        
-        # Function to check if a date exists in the dictionary list
-        def check_date(date, date_list):
-            return 1 if date in date_list else 0
-
-        # Add columns with string headers and binary representation
-        for header, date_list in dictionary_x.items():
-            df_x[header] = df_x.reset_index()['ds'].apply(lambda x: check_date(x, date_list)).values
-        df_x['chart type'] = 'Variable Control Chart'
-        self.data_x = df_x.reset_index()
+            fig.update_yaxes(title_text="Process", row=1, col=1)
+            fig.update_xaxes(title_text="Date", row=2, col=1)
+            fig.update_yaxes(title_text=moving_range, row=2, col=1)
             
-        if df_y is None:
-                self.data_y = None
-        else:
-            for header, date_list in dictionary_y.items():
-                df_y[header] = df_y.reset_index()['ds'].apply(lambda x: check_date(x, date_list)).values
-            df_y['chart type'] = 'Moving Range Control Chart'
-
-            self.data_y = df_y.reset_index()
+                
+            # Don't show all legend labels
+            fig.update_traces(showlegend=False, selector=dict(name='CENTRAL LINE'), row=2, col=1)
+            fig.update_traces(showlegend=False, selector=dict(name='LOWER CONTROL LINE'), row=2, col=1)
+            fig.update_traces(showlegend=False, selector=dict(name='UPPER CONTROL LINE'), row=2, col=1)
             
-        # Returning data required to build own SPC charts.
-        return self.data_x, self.data_y
+            fig.update_traces(showlegend=False, selector=dict(name='CENTRAL LINE'), row=1, col=1)
+            fig.update_traces(showlegend=False, selector=dict(name='LOWER CONTROL LINE'), row=1, col=1)
+            fig.update_traces(showlegend=False, selector=dict(name='UPPER CONTROL LINE'), row=1, col=1)
             
+            fig.update_traces(showlegend=False, selector=dict(name='Value'), row=1, col=1)
+            fig.update_traces(showlegend=False, selector=dict(name='Moving Range'), row=2, col=1)
             
-        
-        
- 
+            fig.update_layout(legend=dict(orientation="h", yanchor="bottom", y=-0.4, xanchor="left"))
+            
+            return fig            
