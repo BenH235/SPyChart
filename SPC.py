@@ -95,6 +95,7 @@ class SPC:
         self.target_col_y = None
         self.chart_name_ = None
         self.chart_name_y = None
+        self.rules_table = None
         self.date_col = data_in.index.name
         
         self.change_dates = change_dates
@@ -181,6 +182,17 @@ class SPC:
             if np.all(np.abs(subset[target_col] - subset['cl']) <= subset['+1sd'] - subset['cl']):
                 rule5.append(input_df.index[i])
         violations['Rule 5 violation'] = rule5
+
+        # https://www.england.nhs.uk/improvement-hub/wp-content/uploads/sites/44/2017/11/A-gu
+        # ide-to-creating-and-interpreting-run-and-control-charts.pdf
+        rules_df = pd.DataFrame()
+        rules_df['Rule 1'] = '1 point outside the +/- 3 sigma limits'
+        rules_df['Rule 2'] = '8 successive consecutive points above (or below) the centre line'
+        rules_df['Rule 3'] = '6 or more consecutive points steadily increasing or decreasing'
+        rules_df['Rule 4'] = '2 out of 3 successive points beyond +/- 2 sigma limits'
+        rules_df['Rule 5'] = '15 consecutive points within +/- 1 sigma on either side of the centre line'
+        
+        self.rules_table = rules_df
 
         return violations
     
