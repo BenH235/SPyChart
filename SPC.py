@@ -47,8 +47,9 @@ class SPC:
 
         This class does the following SPC analysis steps:
 
-            - Takes in pandas dataframe, with a date column and a target column to analyse
-            (note, some charts require a third column ("p-chart" & "u-chart"), 'n', giving the sample size).
+            - Takes in pandas dataframe, with a datetime index and the target column.
+            (note, some charts require a third column ("p-chart" & "u-chart"), giving the sample size. 
+            This column must be named 'n').
 
             - Calculates control lines (for the specified SPC chart).
 
@@ -76,34 +77,34 @@ class SPC:
                  - "XbarS-chart"
 
              change_dates (list of str) (OPTIONAL): List of dates, which each represent a change in the underlying
-             process being analysed. This will mean control lines will be re-calculated after each date in the list.
+             process being analysed. Control lines will be re-calculated after each date in the list.
 
-             baseline_date (str) (OPTIONAL): Data before this will be used to calculate control lines, and data after,
-             will be ignored in the control lines calculation.
+             baseline_date (str) (OPTIONAL): Data before this date will be used to calculate the control lines.
 
 
         """
 
-        self.data_y = None
-        self.data_x = None
-        self.rules_list_x = None
-        self.rules_list_y = None
-        self.dict_rules_x = None
-        self.dict_rules_y = None
-        self.formatted_data_x = None
-        self.formatted_data_y = None
-        self.target_col_x = None
-        self.target_col_y = None
-        self.chart_name_ = None
-        self.chart_name_y = None
-        self.rules_table = None
-        self.date_col = data_in.index.name
-
-        self.change_dates = change_dates
         self.data_in = data_in.copy()
         self.target_col = target_col
         self.chart_type = chart_type
+        self.change_dates = change_dates
         self.baseline_date = baseline_date
+        self.rules_table = None
+        self.spc_data = None
+
+        self._data_y = None
+        self._data_x = None
+        self._rules_list_x = None
+        self._rules_list_y = None
+        self._dict_rules_x = None
+        self._dict_rules_y = None
+        self._formatted_data_x = None
+        self._formatted_data_y = None
+        self._target_col_x = None
+        self._target_col_y = None
+        self._chart_name_x = None
+        self._chart_name_y = None
+        self._date_col = data_in.index.name
 
 
         # https://www.england.nhs.uk/improvement-hub/wp-content/uploads/sites/44/2017/11/A-gu
@@ -116,8 +117,14 @@ class SPC:
                              '2 out of 3 successive points beyond +/- 2 sigma limits',
                              '15 consecutive points within +/- 1 sigma on either side of the centre line']
         rules_df = rules_df.set_index('Rules')
+        
+        # Save rules attribute as dataframe.
         self.rules_table = rules_df
 
+        # ------------------------------------------------------
+        # -** Checking data/alering user of potential issues.**-
+        # ------------------------------------------------------
+        
         if (data_in.index.value_counts() > 1).any():
             print('Duplicate dates detected.')
 
@@ -137,7 +144,7 @@ class SPC:
     # -** UTILITY FUNCTIONS **-
     # -------------------------
 
-    def rules_func(input_df, target_col):
+    def _rules_func(input_df, target_col):
 
         """
 
@@ -195,7 +202,7 @@ class SPC:
 
         return violations
 
-    def clean_time_series_data(self, data):
+    def _clean_time_series_data(self, data):
 
         """
 
@@ -228,7 +235,7 @@ class SPC:
 
         """
 
-        Function enabling multiple runs of the setup_single_run() method. This is to allow
+        Function enabling multiple runs of the _setup_single_run() method. This is to allow
         for control lines to be calculated multiple times (if specified by user using the change_dates parameter).
 
         If change_dates is not specified, it runs only once.
@@ -236,15 +243,15 @@ class SPC:
 
         """
 
-        # Firstly, we check for any DQ issues using clean_time_series_data().
-        self.clean_time_series_data(self.data_in)
+        # Firstly, we check for any DQ issues using _clean_time_series_data().
+        self._clean_time_series_data(self.data_in)
 
-        # Check input arguments to determine number of runs of the setup_single_run() method.
+        # Check input arguments to determine number of runs of the _setup_single_run() method.
         if self.change_dates is None:
 
-            formatted_x_out, formatted_y_out = self.setup_single_run(data=self.data_in)
-            self.formatted_data_x = formatted_x_out
-            self.formatted_data_y = formatted_y_out
+            formatted_x_out, formatted_y_out = self._setup_single_run(data=self.data_in)
+            self._formatted_data_x = formatted_x_out
+            self._formatted_data_y = formatted_y_out
         else:
             list_dates = [self.data_in.index[0]] + self.change_dates + [self.data_in.index[-1]]
             list_dataframes = []
@@ -258,16 +265,16 @@ class SPC:
             formatted_x = []
             formatted_y = []
             for data in list_dataframes:
-                formatted_x_out, formatted_y_out = self.setup_single_run(data=data)
+                formatted_x_out, formatted_y_out = self._setup_single_run(data=data)
                 formatted_x.append(formatted_x_out)
                 formatted_y.append(formatted_y_out)
-            self.formatted_data_x = pd.concat(formatted_x)
+            self._formatted_data_x = pd.concat(formatted_x)
             if all(x is None for x in formatted_y):
-                self.formatted_data_y = None
+                self._formatted_data_y = None
             else:
-                self.formatted_data_y = pd.concat(formatted_y)
+                self._formatted_data_y = pd.concat(formatted_y)
 
-    def setup_single_run(self, data):
+    def _setup_single_run(self, data):
 
         """
 
@@ -391,15 +398,15 @@ class SPC:
         elif self.chart_type == 'XbarR-chart':
 
             data_x_bar = data.copy().reset_index(drop=False)
-            x_bar_df = data_x_bar.groupby(by=self.date_col).mean().reset_index(drop=False).rename(
+            x_bar_df = data_x_bar.groupby(by=self._date_col).mean().reset_index(drop=False).rename(
                 columns={self.target_col: 'x_bar'})
-            x_bar_df['r'] = data_x_bar.groupby(by=self.date_col).max()[self.target_col].values - \
-                            data_x_bar.groupby(by=self.date_col).min()[
+            x_bar_df['r'] = data_x_bar.groupby(by=self._date_col).max()[self.target_col].values - \
+                            data_x_bar.groupby(by=self._date_col).min()[
                                 self.target_col].values
 
-            df_r = x_bar_df[['r', self.date_col]].set_index(self.date_col,
+            df_r = x_bar_df[['r', self._date_col]].set_index(self._date_col,
                                                             drop=True).rename(columns={'x_bar': self.target_col})
-            df_out = x_bar_df[['x_bar', self.date_col]].set_index(self.date_col,
+            df_out = x_bar_df[['x_bar', self._date_col]].set_index(self._date_col,
                                                                   drop=True).rename(columns={'x_bar': self.target_col})
             df_out['cl'] = df_out.loc[:pd.to_datetime(self.baseline_date)][self.target_col].mean()
             df_out['lcl'] = df_out.loc[:pd.to_datetime(self.baseline_date)][self.target_col].mean() - float(
@@ -421,7 +428,7 @@ class SPC:
             df_out['lcl'] = [x if x > 0 else 0 for x in df_out['lcl']]
 
             df_out_R = pd.DataFrame()
-            df_out_R[self.date_col] = x_bar_df[self.date_col].values
+            df_out_R[self._date_col] = x_bar_df[self._date_col].values
             df_out_R['r'] = x_bar_df['r'].values
             df_out_R['cl'] = df_r.loc[:pd.to_datetime(self.baseline_date)]['r'].mean()
             df_out_R['lcl'] = df_r.loc[:pd.to_datetime(self.baseline_date)]['r'].mean() * float(
@@ -436,7 +443,7 @@ class SPC:
             df_out_R['+2sd'] = df_out_R['cl'] + 2 * zone_R
             df_out_R['-2sd'] = df_out_R['cl'] - 2 * zone_R
 
-            df_out_R = df_out_R.set_index(self.date_col, drop=True)
+            df_out_R = df_out_R.set_index(self._date_col, drop=True)
 
             if df_out_R['lcl'][0] < 0:
                 df_out_R['lcl'] = 0
@@ -447,15 +454,15 @@ class SPC:
 
             data_x_bar = data.copy().reset_index(drop=False)
 
-            x_bar_df = data_x_bar.groupby(by=self.date_col).mean().reset_index(drop=False).rename(
+            x_bar_df = data_x_bar.groupby(by=self._date_col).mean().reset_index(drop=False).rename(
                 columns={self.target_col: 'x_bar'})
-            x_bar_df['r'] = data_x_bar.groupby(by=self.date_col).max()[self.target_col].values - \
-                            data_x_bar.groupby(by=self.date_col).min()[
+            x_bar_df['r'] = data_x_bar.groupby(by=self._date_col).max()[self.target_col].values - \
+                            data_x_bar.groupby(by=self._date_col).min()[
                                 self.target_col].values
 
-            df_r = x_bar_df[['r', self.date_col]].set_index(self.date_col, drop=True).rename(
+            df_r = x_bar_df[['r', self._date_col]].set_index(self._date_col, drop=True).rename(
                 columns={'x_bar': self.target_col})
-            df_out = x_bar_df[['x_bar', self.date_col]].set_index(self.date_col,
+            df_out = x_bar_df[['x_bar', self._date_col]].set_index(self._date_col,
                                                                   drop=True).rename(columns={'x_bar': self.target_col})
             df_out['cl'] = df_out.loc[:pd.to_datetime(self.baseline_date)][self.target_col].mean()
             df_out['lcl'] = df_out.loc[:pd.to_datetime(self.baseline_date)][self.target_col].mean() - float(
@@ -476,7 +483,7 @@ class SPC:
             df_out['lcl'] = [x if x > 0 else 0 for x in df_out['lcl']]
 
             df_out_S = pd.DataFrame()
-            df_out_S[self.date_col] = x_bar_df[self.date_col].values
+            df_out_S[self._date_col] = x_bar_df[self._date_col].values
             df_out_S['r'] = x_bar_df['r'].values
             df_out_S['cl'] = df_r.loc[:pd.to_datetime(self.baseline_date)]['r'].mean()
             df_out_S['lcl'] = df_r.loc[:pd.to_datetime(self.baseline_date)]['r'].mean() * float(
@@ -495,7 +502,7 @@ class SPC:
             if df_out_S['lcl'][0] < 0:
                 df_out_S['lcl'] = 0
 
-            df_out_S = df_out_S.set_index(self.date_col, drop=True)
+            df_out_S = df_out_S.set_index(self._date_col, drop=True)
 
             return df_out, df_out_S
 
@@ -609,27 +616,27 @@ class SPC:
 
             data_in['cl'] = data_in.loc[:pd.to_datetime(self.baseline_date)][self.target_col].mean()
             data_in['lcl'] = data_in.loc[:pd.to_datetime(self.baseline_date)][self.target_col].mean() - 3 * \
-                             (((data_in.loc[:pd.to_datetime(self.baseline_date)][self.target_col].mean()) ** 0.5) /
-                              (data_in.loc[:pd.to_datetime(self.baseline_date)]['n']) ** 0.5)
+                             (((data_in.loc[:pd.to_datetime(self.baseline_date)][self.target_col].mean())) /
+                              (data_in.loc[:pd.to_datetime(self.baseline_date)]['n'])) ** 0.5
             data_in['ucl'] = data_in.loc[:pd.to_datetime(self.baseline_date)][self.target_col].mean() + 3 * \
-                             (((data_in.loc[:pd.to_datetime(self.baseline_date)][self.target_col].mean()) ** 0.5) /
-                              (data_in.loc[:pd.to_datetime(self.baseline_date)]['n']) ** 0.5)
+                             (((data_in.loc[:pd.to_datetime(self.baseline_date)][self.target_col].mean())) /
+                              (data_in.loc[:pd.to_datetime(self.baseline_date)]['n'])) ** 0.5
 
             data_in['+1sd'] = data_in.loc[:pd.to_datetime(self.baseline_date)][self.target_col].mean() + 1 * \
-                              (((data_in.loc[:pd.to_datetime(self.baseline_date)][self.target_col].mean()) ** 0.5) /
-                               (data_in.loc[:pd.to_datetime(self.baseline_date)]['n']) ** 0.5)
+                              (((data_in.loc[:pd.to_datetime(self.baseline_date)][self.target_col].mean())) /
+                               (data_in.loc[:pd.to_datetime(self.baseline_date)]['n'])) ** 0.5
 
             data_in['-1sd'] = data_in.loc[:pd.to_datetime(self.baseline_date)][self.target_col].mean() - 1 * \
-                              (((data_in.loc[:pd.to_datetime(self.baseline_date)][self.target_col].mean()) ** 0.5) /
-                               (data_in.loc[:pd.to_datetime(self.baseline_date)]['n']) ** 0.5)
+                              (((data_in.loc[:pd.to_datetime(self.baseline_date)][self.target_col].mean())) /
+                               (data_in.loc[:pd.to_datetime(self.baseline_date)]['n'])) ** 0.5
 
             data_in['+2sd'] = data_in.loc[:pd.to_datetime(self.baseline_date)][self.target_col].mean() + 2 * \
-                              (((data_in.loc[:pd.to_datetime(self.baseline_date)][self.target_col].mean()) ** 0.5) /
-                               (data_in.loc[:pd.to_datetime(self.baseline_date)]['n']) ** 0.5)
+                              (((data_in.loc[:pd.to_datetime(self.baseline_date)][self.target_col].mean())) /
+                               (data_in.loc[:pd.to_datetime(self.baseline_date)]['n'])) ** 0.5
 
             data_in['-2sd'] = data_in.loc[:pd.to_datetime(self.baseline_date)][self.target_col].mean() - 2 * \
-                              (((data_in.loc[:pd.to_datetime(self.baseline_date)][self.target_col].mean()) ** 0.5) /
-                               (data_in.loc[:pd.to_datetime(self.baseline_date)]['n']) ** 0.5)
+                              (((data_in.loc[:pd.to_datetime(self.baseline_date)][self.target_col].mean())) /
+                               (data_in.loc[:pd.to_datetime(self.baseline_date)]['n'])) ** 0.5
 
             # Check lcl doesn't fall below 0.
             data_in['lcl'] = [x if x > 0 else 0 for x in data_in['lcl']]
@@ -651,51 +658,51 @@ class SPC:
         """
 
         if self.chart_type in ("XmR-chart", "XbarR-chart", "XbarS-chart"):
-            self.target_col_x = self.target_col
-            self.target_col_y = 'r'
+            self._target_col_x = self.target_col
+            self._target_col_y = 'r'
         else:
-            self.target_col_x = self.target_col
-            self.target_col_y = None
+            self._target_col_x = self.target_col
+            self._target_col_y = None
 
         # Check rules for both graphs (checking second graph data is not None)
-        self.dict_rules_x = SPC.rules_func(self.formatted_data_x, self.target_col_x)
-        if self.formatted_data_y is None:
-            self.dict_rules_y = None
+        self._dict_rules_x = SPC.rules_func(self._formatted_data_x, self._target_col_x)
+        if self._formatted_data_y is None:
+            self._dict_rules_y = None
         else:
-            self.dict_rules_y = SPC.rules_func(self.formatted_data_y, self.target_col_y)
+            self._dict_rules_y = SPC.rules_func(self._formatted_data_y, self._target_col_y)
 
         # Defining rules applicable to each SPC chart type.
         if self.chart_type in ('XmR-chart', 'Individual-chart', 'XbarR-chart', 'XbarS-chart'):
-            self.rules_list_x = ['Rule 1 violation', 'Rule 2 violation', 'Rule 3 violation', 'Rule 4 violation',
+            self._rules_list_x = ['Rule 1 violation', 'Rule 2 violation', 'Rule 3 violation', 'Rule 4 violation',
                                  'Rule 5 violation']
         elif self.chart_type in ('np-chart', 'p-chart', 'u-chart', 'c-chart'):
-            self.rules_list_x = ['Rule 1 violation', 'Rule 2 violation', 'Rule 3 violation']
+            self._rules_list_x = ['Rule 1 violation', 'Rule 2 violation', 'Rule 3 violation']
 
-        if self.dict_rules_y is not None:
-            self.rules_list_y = ['Rule 1 violation', 'Rule 2 violation', 'Rule 3 violation']
+        if self._dict_rules_y is not None:
+            self._rules_list_y = ['Rule 1 violation', 'Rule 2 violation', 'Rule 3 violation']
         else:
-            self.rules_list_y = None
+            self._rules_list_y = None
 
         # Format output data, with rule violations and control lines
 
         # Formatting chart type names
         if self.chart_type in ('XmR-chart', 'Individual-chart'):
-            self.chart_name_x = 'X-chart'
+            self._chart_name_x = 'X-chart'
         if self.chart_type in ('XmR-chart', 'XbarR-chart'):
-            self.chart_name_y = 'mR-chart'
+            self._chart_name_y = 'mR-chart'
         if self.chart_type in ('XbarS-chart', 'XbarR-chart'):
-            self.chart_name_x = 'Xbar-chart'
+            self._chart_name_x = 'Xbar-chart'
         if self.chart_type in ('np-chart', 'p-chart', 'u-chart', 'c-chart'):
-            self.chart_name_x = self.chart_type
+            self._chart_name_x = self.chart_type
 
-        dictionary_x_first = self.dict_rules_x
-        dictionary_x = {key: value for key, value in dictionary_x_first.items() if key in self.rules_list_x}
-        df_x = self.formatted_data_x
+        dictionary_x_first = self._dict_rules_x
+        dictionary_x = {key: value for key, value in dictionary_x_first.items() if key in self._rules_list_x}
+        df_x = self._formatted_data_x
 
-        if self.dict_rules_y is not None:
-            dictionary_y_first = self.dict_rules_y
-            dictionary_y = {key: value for key, value in dictionary_y_first.items() if key in self.rules_list_y}
-            df_y = self.formatted_data_y
+        if self._dict_rules_y is not None:
+            dictionary_y_first = self._dict_rules_y
+            dictionary_y = {key: value for key, value in dictionary_y_first.items() if key in self._rules_list_y}
+            df_y = self._formatted_data_y
         else:
             df_y = None
 
@@ -706,20 +713,20 @@ class SPC:
 
         # Add columns with string headers and binary representation
         for header, date_list in dictionary_x.items():
-            df_x[header] = df_x.reset_index()[self.date_col].apply(lambda x: check_date(x, date_list)).values
-        df_x['chart type'] = self.chart_name_x
-        self.data_x = df_x.reset_index()
+            df_x[header] = df_x.reset_index()[self._date_col].apply(lambda x: check_date(x, date_list)).values
+        df_x['chart type'] = self._chart_name_x
+        self._data_x = df_x.reset_index()
 
         if df_y is None:
-            self.data_y = None
+            self._data_y = None
         else:
             for header, date_list in dictionary_y.items():
-                df_y[header] = df_y.reset_index()[self.date_col].apply(lambda x: check_date(x, date_list)).values
-            df_y['chart type'] = self.chart_name_y
+                df_y[header] = df_y.reset_index()[self._date_col].apply(lambda x: check_date(x, date_list)).values
+            df_y['chart type'] = self._chart_name_y
 
-            self.data_y = df_y.reset_index()
+            self._data_y = df_y.reset_index()
 
-        self.spc_data = self.data_x, self.data_y
+        self.spc_data = self._data_x, self._data_y
 
     def plot_spc(self, title='SPC Chart'):
 
@@ -734,12 +741,12 @@ class SPC:
         changepoint = self.baseline_date
 
         # This will create charts for SPC with only one chart.
-        if self.formatted_data_y is None:
+        if self._formatted_data_y is None:
 
-            data = self.formatted_data_x
+            data = self._formatted_data_x
 
-            rules_dict_first = self.dict_rules_x
-            rules_list_first = self.rules_list_x
+            rules_dict_first = self._dict_rules_x
+            rules_list_first = self._rules_list_x
 
             fig = px.line(x=data.index,
                           y=data[self.target_col],
@@ -778,14 +785,14 @@ class SPC:
 
         else:
 
-            data = self.formatted_data_x
-            data_var = self.formatted_data_y
+            data = self._formatted_data_x
+            data_var = self._formatted_data_y
 
-            rules_dict_first = self.dict_rules_x
-            rules_list_first = self.rules_list_x
+            rules_dict_first = self._dict_rules_x
+            rules_list_first = self._rules_list_x
 
-            rules_dict_second = self.dict_rules_y
-            rules_list_second = self.rules_list_y
+            rules_dict_second = self._dict_rules_y
+            rules_list_second = self._rules_list_y
 
             if self.chart_type == 'XbarS-chart':
                 moving_range = "mS"
