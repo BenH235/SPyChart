@@ -666,11 +666,11 @@ class SPC:
             self._target_col_y = None
 
         # Check rules for both graphs (checking second graph data is not None)
-        self._dict_rules_x = SPC.rules_func(self._formatted_data_x, self._target_col_x)
+        self._dict_rules_x = SPC._rules_func(self._formatted_data_x, self._target_col_x)
         if self._formatted_data_y is None:
             self._dict_rules_y = None
         else:
-            self._dict_rules_y = SPC.rules_func(self._formatted_data_y, self._target_col_y)
+            self._dict_rules_y = SPC._rules_func(self._formatted_data_y, self._target_col_y)
 
         # Defining rules applicable to each SPC chart type.
         if self.chart_type in ('XmR-chart', 'Individual-chart', 'XbarR-chart', 'XbarS-chart'):
