@@ -10,7 +10,7 @@ This tool allows you to create Statistical Process Control (SPC) charts by feedi
 
 The minimum input requirements to create an SPC chart are:
 
-- A pandas dataframe with a date index and a column containing process data to analyze.
+- A pandas dataframe with a date index and a column containing process data to analyse.
 - Selection of one of the available chart types.
 
 Some chart types (p-chart, c-chart, XbarR-chart, and XbarS-chart) may require additional inputs. These inputs are described in detail in the example notebook.
