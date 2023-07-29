@@ -4,16 +4,16 @@ An automated Statistical Process Control (SPC) tool designed to streamline SPC a
 
 ## Description
 
-This tool allows you to create Statistical Process Control (SPC) charts by feeding in a pandas dataframe with a datetime index and a column containing the process to analyse. There are multiple chart types available, such as XmR-chart, Individual-chart, p-chart, c-chart, u-chart, XbarR-chart, and XbarS-chart.
+This tool allows you to create Statistical Process Control (SPC) charts by feeding in a pandas dataframe with a date index and a column containing the process to analyse. There are multiple chart types available, such as XmR-chart, Individual-chart, p-chart, c-chart, u-chart, XbarR-chart, and XbarS-chart.
 
 ## Input Requirements
 
-The minimum input requirements to create an SPC chart are:
+The minimum required inputs to create an SPC chart are:
 
 - A pandas dataframe with a date index and a column containing process data to analyse.
 - Selection of one of the available chart types.
 
-Some chart types (p-chart, c-chart, XbarR-chart, and XbarS-chart) may require additional inputs. These inputs are described in detail in the example notebook.
+Some chart types (p-chart, c-chart, XbarR-chart, and XbarS-chart) may require additional inputs. These inputs are described in more detail in the example notebook.
 
 ## Additional Arguments
 
@@ -24,15 +24,15 @@ The tool supports the following additional arguments:
 
 ## Rule-based Testing
 
-Up to 5 rules are tested to identify any special cause variation.
+Up to 5 rules are tested to identify special cause variation. More information on which rules have been selected can be found here: https://www.england.nhs.uk/improvement-hub/wp-content/uploads/sites/44/2017/11/A-guide-to-creating-and-interpreting-run-and-control-charts.pdf
 
 ## Outputs
 
-The SPC charts will be generated using Plotly, providing an interactive visualisation. Additionally, the data used to create the chart will be available, allowing you to produce your own SPC charts.
+The SPC charts will be created using Plotly, providing an interactive visualisation. Additionally, the data used to create the chart will be available, allowing you to produce your own SPC charts.
 
 ## Examples
 
-Usage examples of the tool can be found in the examples directory of the repository. These examples demonstrate how to use the SPC tool with various datasets and chart types.
+Examples of using the tool can be found in the examples directory of the repository. These examples demonstrate how to use the SPC tool with various datasets and chart types.
 
 ## Version History
 
