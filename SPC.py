@@ -28,14 +28,11 @@ from plotly.subplots import make_subplots
 -** REFERENCES **-
 ------------------
 
-    
-- https://towardsdatascience.com/quality-control-charts-guide-for-python-9bb1c859c051
 - https://www.spcforexcel.com/knowledge/control-chart-basics/control-chart-rules-interpretation 
 - https://www.spcforexcel.com/knowledge/control-chart-basics/applying-out-of-control-tests
 - https://qi.elft.nhs.uk/wp-content/uploads/2018/10/Mohammed-et-al-2008-Plotting-basic-control-charts.pdf
 - https://www.england.nhs.uk/improvement-hub/wp-content/uploads/sites/44/2017/11/A-guide-to-creating-and-interpreting-run-and-control-charts.pdf
 - https://www.isdscotland.org/health-topics/quality-indicators/statistical-process-control/_docs/Statistical-Process-Control-Tutorial-Guide-180713.pdf
-- https://www.qimacros.com/pdf/control-chart-cheat-sheet.pdf
     
 '''
 
