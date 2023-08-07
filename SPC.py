@@ -285,8 +285,8 @@ class SPC:
        upper/lower limits and the center line.
 
         Args:
-            data_in (pandas.DataFrame): Data input.
-            chart_type (str): SPC chart type.
+            data_in (pandas.DataFrame): Data input (with datetime index).
+            chart_type (str): SPC chart type (selected from one of the above).
 
         Returns:
             self.pandas.DataFrame: Pandas dataframe with control limits for each chart.
