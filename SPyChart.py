@@ -39,7 +39,7 @@ from plotly.subplots import make_subplots
 
 class SPC:
 
-    def __init__(self, data_in, target_col, chart_type, change_dates=None, baseline_date=None):
+    def __init__(self, data_in, target_col, chart_type='Individual-chart', change_dates=None, baseline_date=None):
 
         """
 
@@ -102,6 +102,7 @@ class SPC:
         self._target_col_y = None
         self._chart_name_x = None
         self._chart_name_y = None
+        # Assuming index is date
         self._date_col = data_in.index.name
 
 
@@ -110,19 +111,19 @@ class SPC:
         rules_df = pd.DataFrame()
         rules_df['Rules'] = ['Rule 1', 'Rule 2', 'Rule 3', 'Rule 4', 'Rule 5']
         rules_df['Rule definition'] = ['1 point outside the +/- 3 sigma limits',
-                             '8 successive consecutive points above (or below) the centre line',
-                             '6 or more consecutive points steadily increasing or decreasing',
-                             '2 out of 3 successive points beyond +/- 2 sigma limits',
-                             '15 consecutive points within +/- 1 sigma on either side of the centre line']
+                                       '8 successive consecutive points above (or below) the centre line',
+                                       '6 or more consecutive points steadily increasing or decreasing',
+                                       '2 out of 3 successive points beyond +/- 2 sigma limits',
+                                       '15 consecutive points within +/- 1 sigma on either side of the centre line']
         rules_df = rules_df.set_index('Rules')
-        
+
         # Save rules attribute as dataframe.
         self.rules_table = rules_df
 
         # ------------------------------------------------------
-        # -** Checking data/alering user of potential issues.**-
+        # -** Checking data/alerting user of potential issues.**-
         # ------------------------------------------------------
-        
+
         if (data_in.index.value_counts() > 1).any():
             print('Duplicate dates detected.')
 
@@ -137,6 +138,14 @@ class SPC:
             if len(data_in.copy().loc[:pd.to_datetime(self.baseline_date)]) < 20:
                 print('Less than 20 data points detected in baseline period. Consider adding more \
                 data pre-baseline.')
+
+        self.setup()
+        self.check_rules()
+        start_date = pd.to_datetime(data_in.index.min()).strftime('%d/%m/%Y')
+        end_date = pd.to_datetime(data_in.index.max()).strftime('%d/%m/%Y')
+        title = f'<b>SPC Chart:</b> Monitoring the variable {target_col} during the period {start_date} to {end_date}'
+        fig = self.plot_spc(title=title)
+        self.spc_chart = fig
 
     # -------------------------
     # -** UTILITY FUNCTIONS **-
@@ -403,9 +412,9 @@ class SPC:
                                 self.target_col].values
 
             df_r = x_bar_df[['r', self._date_col]].set_index(self._date_col,
-                                                            drop=True).rename(columns={'x_bar': self.target_col})
+                                                             drop=True).rename(columns={'x_bar': self.target_col})
             df_out = x_bar_df[['x_bar', self._date_col]].set_index(self._date_col,
-                                                                  drop=True).rename(columns={'x_bar': self.target_col})
+                                                                   drop=True).rename(columns={'x_bar': self.target_col})
             df_out['cl'] = df_out.loc[:pd.to_datetime(self.baseline_date)][self.target_col].mean()
             df_out['lcl'] = df_out.loc[:pd.to_datetime(self.baseline_date)][self.target_col].mean() - float(
                 x_bar_vals['A2'][self.sample_size]) * \
@@ -461,7 +470,7 @@ class SPC:
             df_r = x_bar_df[['r', self._date_col]].set_index(self._date_col, drop=True).rename(
                 columns={'x_bar': self.target_col})
             df_out = x_bar_df[['x_bar', self._date_col]].set_index(self._date_col,
-                                                                  drop=True).rename(columns={'x_bar': self.target_col})
+                                                                   drop=True).rename(columns={'x_bar': self.target_col})
             df_out['cl'] = df_out.loc[:pd.to_datetime(self.baseline_date)][self.target_col].mean()
             df_out['lcl'] = df_out.loc[:pd.to_datetime(self.baseline_date)][self.target_col].mean() - float(
                 x_bar_vals['A3'][self.sample_size]) * \
@@ -672,7 +681,7 @@ class SPC:
         # Defining rules applicable to each SPC chart type.
         if self.chart_type in ('XmR-chart', 'Individual-chart', 'XbarR-chart', 'XbarS-chart'):
             self._rules_list_x = ['Rule 1 violation', 'Rule 2 violation', 'Rule 3 violation', 'Rule 4 violation',
-                                 'Rule 5 violation']
+                                  'Rule 5 violation']
         elif self.chart_type in ('np-chart', 'p-chart', 'u-chart', 'c-chart'):
             self._rules_list_x = ['Rule 1 violation', 'Rule 2 violation', 'Rule 3 violation']
 
@@ -724,7 +733,7 @@ class SPC:
 
             self._data_y = df_y.reset_index()
 
-        self.spc_data = self._data_x, self._data_y
+        self.spc_data = pd.concat([self._data_x, self._data_y])
 
     def plot_spc(self, title='SPC Chart'):
 
@@ -765,7 +774,7 @@ class SPC:
                                            size=12,
                                            line=dict(width=3))))
 
-            fig['layout']['xaxis']['title'] = 'Date'
+            fig['layout']['xaxis']['title'] = ''
             fig['layout']['yaxis']['title'] = 'Process'
             fig.update_layout(title=title)
 
@@ -845,7 +854,7 @@ class SPC:
             fig['layout']['xaxis'].update(autorange=True)
 
             fig.update_yaxes(title_text="Process", row=1, col=1)
-            fig.update_xaxes(title_text="Date", row=2, col=1)
+            fig.update_xaxes(title_text="", row=2, col=1)
             fig.update_yaxes(title_text=moving_range, row=2, col=1)
 
             # Don't show all legend labels
@@ -863,3 +872,4 @@ class SPC:
             fig.update_layout(legend=dict(orientation="h", yanchor="bottom", y=-0.4, xanchor="left"))
 
             return fig
+
