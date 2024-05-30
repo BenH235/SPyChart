@@ -212,12 +212,10 @@ class SPC:
     def _clean_time_series_data(self, data):
 
         """
-
         Checks data for any data quality issues.
-
-        Args:
-            data (pandas.DataFrame): Data to analyse.
-
+        
+        Inputs:
+            data (pandas.DataFrame): Data to analyse (with datetime index).
         """
 
         # Check if index is in pandas datetime format
